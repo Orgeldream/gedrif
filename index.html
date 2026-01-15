@@ -588,7 +588,7 @@
         let audioContext, isPlaying = false, leftSounds = [], rightSounds = [];
         let schedulerTimer, nextNoteTime = 0, currentStep = 0;
         let reverbNode, reverbGain, dryGain, limiter;
-        let delayNode, delayFeedback, delayWetGain;
+        let delayNode, delayFeedback, delayWetGain, delayLimiter;
 
         const PATTERNS = [
             { name: '4/4', beats: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] },
@@ -669,7 +669,8 @@
 
         function setupEventListeners() {
             const bind = (id, key, fmt) => {
-                document.getElementById(id).addEventListener('input', e => {
+                const element = document.getElementById(id);
+                element.addEventListener('input', e => {
                     const v = e.target.value;
                     if (key === 'resolution') {
                         state.resolution = getResolution(v);
@@ -677,6 +678,7 @@
                     } else if (key === 'tempo') {
                         state.tempo = parseInt(v);
                         document.getElementById(id + 'Value').textContent = v + ' BPM';
+                        updateDelayTime(); // Update delay when tempo changes
                     } else if (key.startsWith('pattern')) {
                         state[key] = parseInt(v);
                         document.getElementById(id + 'Value').textContent = PATTERNS[v].name;
@@ -721,16 +723,45 @@
 
         function updateDelayTime() {
             if (!delayNode || !audioContext) return;
+            
+            // If delay is off, mute the wet signal
             if (state.delayRate === 0) {
+                delayWetGain.gain.cancelScheduledValues(audioContext.currentTime);
                 delayWetGain.gain.setTargetAtTime(0, audioContext.currentTime, 0.05);
                 return;
             }
+            
+            // Calculate delay time based on tempo
             const beatSeconds = 60 / state.tempo;
-            const rateMap = { 0.5: 2.0, 1.0: 1.0, 2.0: 0.5 }; // radio val -> beat multiplier
-            const delayTime = beatSeconds * (rateMap[state.delayRate] || 1.0);
-
-            delayNode.delayTime.setTargetAtTime(delayTime, audioContext.currentTime, 0.1);
-            delayWetGain.gain.setTargetAtTime(0.4, audioContext.currentTime, 0.1);
+            let delayTime;
+            
+            // Map radio values to actual musical durations
+            switch(state.delayRate) {
+                case 0.5:  // 1/2 note
+                    delayTime = beatSeconds * 2;
+                    break;
+                case 1.0:  // 1/4 note
+                    delayTime = beatSeconds;
+                    break;
+                case 2.0:  // 1/8 note
+                    delayTime = beatSeconds / 2;
+                    break;
+                default:
+                    delayTime = beatSeconds; // Default to quarter note
+            }
+            
+            // Apply minimum delay time to prevent glitches
+            const minDelayTime = 0.05; // 50ms minimum
+            delayTime = Math.max(delayTime, minDelayTime);
+            
+            // Smoothly update delay time
+            delayNode.delayTime.cancelScheduledValues(audioContext.currentTime);
+            delayNode.delayTime.setValueAtTime(delayNode.delayTime.value, audioContext.currentTime);
+            delayNode.delayTime.linearRampToValueAtTime(delayTime, audioContext.currentTime + 0.1);
+            
+            // Set wet gain
+            delayWetGain.gain.cancelScheduledValues(audioContext.currentTime);
+            delayWetGain.gain.setTargetAtTime(0.35, audioContext.currentTime, 0.05);
         }
 
         function updateAllDisplays() {
@@ -828,25 +859,31 @@
             dryGain = audioContext.createGain();
             limiter = audioContext.createDynamicsCompressor();
 
-            // Delay Line
+            // Delay Line setup
             delayNode = audioContext.createDelay(4.0);
             delayFeedback = audioContext.createGain();
             delayWetGain = audioContext.createGain();
+            delayLimiter = audioContext.createDynamicsCompressor();
 
-            delayFeedback.gain.value = 0.35; // Rhythmic feedback level
-            delayWetGain.gain.value = 0; // Start off
+            // Set initial values
+            delayFeedback.gain.value = 0.4; // Reduced feedback to prevent runaway
+            delayWetGain.gain.value = 0;
+            delayNode.delayTime.value = 0.5; // Initial safe value
 
+            // Delay limiter settings to prevent feedback buildup
+            delayLimiter.threshold.value = -6;
+            delayLimiter.knee.value = 0;
+            delayLimiter.ratio.value = 12;
+            delayLimiter.attack.value = 0.005;
+            delayLimiter.release.value = 0.1;
+
+            // Connect delay with feedback and limiting
             delayNode.connect(delayFeedback);
             delayFeedback.connect(delayNode);
-            delayNode.connect(delayWetGain);
+            delayNode.connect(delayLimiter);
+            delayLimiter.connect(delayWetGain);
 
-            // Limiter Settings
-            limiter.threshold.value = -1.0;
-            limiter.knee.value = 0;
-            limiter.ratio.value = 20.0;
-            limiter.attack.value = 0.005;
-            limiter.release.value = 0.1;
-
+            // Create reverb impulse
             const duration = 3;
             const sampleRate = audioContext.sampleRate;
             const impulse = audioContext.createBuffer(2, duration * sampleRate, sampleRate);
@@ -860,6 +897,13 @@
 
             reverbNode.buffer = impulse;
             reverbNode.connect(reverbGain);
+
+            // Limiter settings for master output
+            limiter.threshold.value = -1.0;
+            limiter.knee.value = 0;
+            limiter.ratio.value = 20.0;
+            limiter.attack.value = 0.005;
+            limiter.release.value = 0.1;
 
             // Route everything through limiter
             reverbGain.connect(limiter);
@@ -906,12 +950,19 @@
             source.connect(gainNode);
             gainNode.connect(panNode);
 
+            // Update reverb and dry mix
             reverbGain.gain.value = state.reverb * 0.8;
             dryGain.gain.value = 1 - state.reverb * 0.3;
 
+            // Connect to output nodes
             panNode.connect(dryGain);
             panNode.connect(reverbNode);
-            panNode.connect(delayNode);
+            
+            // Connect to delay with reduced send level to prevent feedback buildup
+            const delaySend = audioContext.createGain();
+            delaySend.gain.value = 0.4;
+            panNode.connect(delaySend);
+            delaySend.connect(delayNode);
 
             source.start(time, startTime, grainDuration * 1.5);
         }
@@ -977,6 +1028,12 @@
             if (schedulerTimer) {
                 clearInterval(schedulerTimer);
                 schedulerTimer = null;
+            }
+            
+            // Reset delay to prevent glitches when stopping
+            if (delayNode && audioContext) {
+                delayWetGain.gain.cancelScheduledValues(audioContext.currentTime);
+                delayWetGain.gain.setTargetAtTime(0, audioContext.currentTime, 0.05);
             }
         }
 

@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GEDRIF</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --accent-color: #888888;
+            --border-color: #333333;
+            --font-main: 'Josefin Sans', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            overflow-x: hidden;
+            touch-action: pan-y;
+            line-height: 1.4;
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100vw;
+            height: 100vh;
+            background: url('OrgelDream_circle_template.png') no-repeat center center;
+            background-size: 50%;
+            opacity: 0.1;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto 0;
+            border: 1px solid var(--border-color);
+            padding: 40px;
+            border-radius: 4px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .title {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 12px;
+            letter-spacing: 3px;
+            color: var(--accent-color);
+            text-transform: uppercase;
+        }
+
+        /* Interface Layout */
+        .interface {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Card Styles (Channels, Global, Status) */
+        .channel,
+        .global-controls,
+        .status {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .channel-header,
+        .global-header {
+            margin-bottom: 15px;
+        }
+
+        .channel-title,
+        .global-header {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--accent-color);
+            text-transform: uppercase;
+        }
+
+        .file-count {
+            font-size: 10px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        /* Controls */
+        .control-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .control {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-label {
+            font-size: 10px;
+            color: #666;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider {
+            flex: 1;
+            height: 2px;
+            -webkit-appearance: none;
+            background: #333;
+            border-radius: 0;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #000;
+        }
+
+        .slider-value {
+            font-size: 10px;
+            color: #fff;
+            min-width: 50px;
+            text-align: right;
+            font-weight: 600;
+        }
+
+        /* Layout modifications */
+        .global-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* Buttons */
+        .button {
+            background: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-family: var(--font-main);
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .button:hover {
+            background: #222;
+            border-color: #666;
+            color: #fff;
+        }
+
+        .button.secondary {
+            /* Reuse base button */
+        }
+
+        .transport {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 0;
+        }
+
+        /* Status & Loading */
+        .status-text {
+            font-size: 11px;
+            color: #888;
+            line-height: 1.6;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .loading-title {
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: 4px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Toggles/Indicators */
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-label {
+            font-size: 10px;
+            color: #666;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .checkbox {
+            width: 14px;
+            height: 14px;
+            border: 1px solid #666;
+            cursor: pointer;
+            position: relative;
+            background: transparent;
+        }
+
+        .checkbox.checked::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            bottom: 2px;
+            background: #fff;
+        }
+
+        .beat-indicator {
+            display: flex;
+            gap: 4px;
+            margin-top: 10px;
+            justify-content: center;
+        }
+
+        .beat-dot {
+            width: 6px;
+            height: 6px;
+            background: #333;
+            border-radius: 50%;
+            transition: background 0.1s;
+        }
+
+        .beat-dot.active {
+            background: #fff;
+        }
+
+        .beat-dot.downbeat {
+            background: #555;
+        }
+
+        .beat-dot.downbeat.active {
+            background: #fff;
+        }
+
+        .sync-indicator {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background: #fff;
+            box-shadow: 0 0 5px #fff;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.3;
+            }
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .footer-link {
+            color: #444;
+            font-size: 11px;
+            text-decoration: none;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: color 0.2s;
+        }
+
+        .footer-link:hover {
+            color: #888;
+        }
+
+        /* Radio Buttons */
+        .radio-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .radio-item input {
+            display: none;
+        }
+
+        .radio-custom {
+            width: 14px;
+            height: 14px;
+            border: 1px solid #666;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .radio-item input:checked+.radio-custom::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            right: 2px;
+            bottom: 2px;
+            background: #fff;
+            border-radius: 1px;
+        }
+
+        .radio-label {
+            font-size: 10px;
+            color: #ccc;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">GEDRIF</div>
+            <div class="subtitle">GENERATIVE RHYTHMIC SAMPLE RECALL</div>
+        </div>
+
+        <div id="loadingScreen">
+            <div class="loading">
+                <div class="loading-title">LOAD AUDIO FILES TO BEGIN</div>
+                <input type="file" id="fileInput" class="file-input" accept="audio/*" multiple webkitdirectory>
+                <button class="button" onclick="document.getElementById('fileInput').click()">LOAD FOLDER</button>
+            </div>
+        </div>
+
+        <div id="mainInterface" class="hidden">
+            <div class="status">
+                <div class="status-text" id="statusText"><span class="sync-indicator"></span>Channels synchronized -
+                    Load audio files to begin</div>
+                <div class="beat-indicator" id="beatIndicator"></div>
+            </div>
+
+            <div class="interface">
+                <div class="channel" id="channelLeft">
+                    <div class="channel-header">
+                        <div class="channel-title">LEFT CHANNEL</div>
+                        <div class="file-count" id="countLeft">0 files</div>
+                    </div>
+                    <div class="control-stack">
+                        <div class="control">
+                            <div class="control-label">Activity</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="densityLeft" min="0" max="100" value="60">
+                                <div class="slider-value" id="densityLeftValue">60%</div>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <div class="control-label">Rhythm Pattern</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="patternLeft" min="0" max="7" value="0">
+                                <div class="slider-value" id="patternLeftValue">4/4</div>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <div class="control-label">Grain Size</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="grainSizeLeft" min="0" max="100" value="50">
+                                <div class="slider-value" id="grainSizeLeftValue">1/8</div>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <div class="control-label">Pitch Variation</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="pitchLeft" min="0" max="100" value="20">
+                                <div class="slider-value" id="pitchLeftValue">20%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="channel" id="channelRight">
+                    <div class="channel-header">
+                        <div class="channel-title">RIGHT CHANNEL</div>
+                        <div class="file-count" id="countRight">0 files</div>
+                    </div>
+                    <div class="control-stack">
+                        <div class="control">
+                            <div class="control-label">Activity</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="densityRight" min="0" max="100" value="60">
+                                <div class="slider-value" id="densityRightValue">60%</div>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <div class="control-label">Rhythm Pattern</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="patternRight" min="0" max="7" value="1">
+                                <div class="slider-value" id="patternRightValue">Offbeat</div>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <div class="control-label">Grain Size</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="grainSizeRight" min="0" max="100" value="50">
+                                <div class="slider-value" id="grainSizeRightValue">1/8</div>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <div class="control-label">Pitch Variation</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="pitchRight" min="0" max="100" value="20">
+                                <div class="slider-value" id="pitchRightValue">20%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="global-controls">
+                <div class="global-header">MASTER CONTROLS</div>
+                <div class="global-grid">
+                    <div class="control-stack">
+                        <div class="control">
+                            <div class="control-label">Resolution</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="resolution" min="0" max="100" value="33">
+                                <div class="slider-value" id="resolutionValue">1/16</div>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <div class="control-label">Tempo</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="tempo" min="40" max="200" value="120">
+                                <div class="slider-value" id="tempoValue">120 BPM</div>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <div class="control-label">Reverb</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="reverb" min="0" max="100" value="25">
+                                <div class="slider-value" id="reverbValue">25%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="control-stack">
+                        <div class="control">
+                            <div class="control-label">Master Volume</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="volume" min="0" max="100" value="70">
+                                <div class="slider-value" id="volumeValue">70%</div>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <div class="control-label">Swing</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="swing" min="0" max="100" value="0">
+                                <div class="slider-value" id="swingValue">0%</div>
+                            </div>
+                        </div>
+                        <div class="control">
+                            <div class="control-label">Dynamic Var.</div>
+                            <div class="slider-container">
+                                <input type="range" class="slider" id="dynamicVar" min="0" max="100" value="0">
+                                <div class="slider-value" id="dynamicVarValue">0%</div>
+                            </div>
+                        </div>
+                        <div class="toggle">
+                            <div class="toggle-label">Sync Channels</div>
+                            <div class="checkbox checked" id="syncToggle" onclick="toggleSync()"></div>
+                        </div>
+                        <div class="control" style="margin-top: 10px;">
+                            <div class="control-label">Delay Rate</div>
+                            <div class="radio-group" id="delayGroup">
+                                <label class="radio-item">
+                                    <input type="radio" name="delayRate" value="0" checked>
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">Off</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="delayRate" value="0.5">
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">1/2</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="delayRate" value="1.0">
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">1/4</span>
+                                </label>
+                                <label class="radio-item">
+                                    <input type="radio" name="delayRate" value="2.0">
+                                    <span class="radio-custom"></span>
+                                    <span class="radio-label">1/8</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="transport">
+                <button class="button" id="transportBtn" onclick="togglePlayback()">START</button>
+                <button class="button secondary" id="randomizeBtn" onclick="randomizeAll()">RANDOMIZE</button>
+                <button class="button secondary" onclick="document.getElementById('fileInput').click()">LOAD
+                    MORE</button>
+            </div>
+
+            <div class="footer">
+                <a href="https://orgeldream.com" class="footer-link">www.orgeldream.com</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let audioContext, isPlaying = false, leftSounds = [], rightSounds = [];
+        let schedulerTimer, nextNoteTime = 0, currentStep = 0;
+        let reverbNode, reverbGain, dryGain, limiter;
+        let delayNode, delayFeedback, delayWetGain;
+
+        const PATTERNS = [
+            { name: '4/4', beats: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0] },
+            { name: 'Offbeat', beats: [0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0] },
+            { name: '2+3', beats: [1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0] },
+            { name: 'Tresillo', beats: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0] },
+            { name: 'Clave', beats: [1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0] },
+            { name: 'Dense', beats: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0] },
+            { name: 'Sparse', beats: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] },
+            { name: 'Synco', beats: [0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0] }
+        ];
+
+        const RESOLUTIONS = [
+            { name: '1/8', divisor: 2 },
+            { name: '1/16', divisor: 4 },
+            { name: '1/32', divisor: 8 },
+            { name: '1/64', divisor: 16 }
+        ];
+
+        const GRAIN_SIZES = [
+            { name: '1/64', beats: 1 / 16 },
+            { name: '1/32', beats: 1 / 8 },
+            { name: '1/16', beats: 1 / 4 },
+            { name: '1/8', beats: 1 / 2 },
+            { name: '1/4', beats: 1 },
+            { name: '1/2', beats: 2 }
+        ];
+
+        const state = {
+            densityLeft: 0.6, patternLeft: 0, grainSizeLeft: 0.5, pitchLeft: 0.2,
+            densityRight: 0.6, patternRight: 1, grainSizeRight: 0.5, pitchRight: 0.2,
+            resolution: 1, tempo: 120, reverb: 0.25, volume: 0.7, swing: 0,
+            dynamicVar: 0, syncChannels: true, delayRate: 0
+        };
+
+        function getResolution(val) {
+            if (val < 25) return 0;
+            if (val < 50) return 1;
+            if (val < 75) return 2;
+            return 3;
+        }
+
+        function getStepDuration() {
+            const res = RESOLUTIONS[state.resolution];
+            return (60 / state.tempo) / res.divisor;
+        }
+
+        function getGrainDuration(grainSize) {
+            const beatDur = 60 / state.tempo;
+            const minGrain = beatDur / 8;
+            const maxGrain = beatDur;
+            return minGrain + grainSize * (maxGrain - minGrain);
+        }
+
+        function init() {
+            setupEventListeners();
+            updateAllDisplays();
+            createBeatIndicator();
+        }
+
+        function createBeatIndicator() {
+            const container = document.getElementById('beatIndicator');
+            container.innerHTML = '';
+            for (let i = 0; i < 16; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'beat-dot' + (i % 4 === 0 ? ' downbeat' : '');
+                dot.id = 'beat-' + i;
+                container.appendChild(dot);
+            }
+        }
+
+        function updateBeatIndicator(step) {
+            for (let i = 0; i < 16; i++) {
+                const dot = document.getElementById('beat-' + i);
+                if (dot) dot.classList.toggle('active', i === step % 16);
+            }
+        }
+
+        function setupEventListeners() {
+            const bind = (id, key, fmt) => {
+                document.getElementById(id).addEventListener('input', e => {
+                    const v = e.target.value;
+                    if (key === 'resolution') {
+                        state.resolution = getResolution(v);
+                        document.getElementById(id + 'Value').textContent = RESOLUTIONS[state.resolution].name;
+                    } else if (key === 'tempo') {
+                        state.tempo = parseInt(v);
+                        document.getElementById(id + 'Value').textContent = v + ' BPM';
+                    } else if (key.startsWith('pattern')) {
+                        state[key] = parseInt(v);
+                        document.getElementById(id + 'Value').textContent = PATTERNS[v].name;
+                    } else if (key.startsWith('grainSize')) {
+                        state[key] = v / 100;
+                        const dur = getGrainDuration(state[key]);
+                        const beatDur = 60 / state.tempo;
+                        const ratio = dur / beatDur;
+                        let label = ratio <= 0.125 ? '1/64' : ratio <= 0.25 ? '1/32' : ratio <= 0.5 ? '1/16' : ratio <= 1 ? '1/8' : '1/4';
+                        document.getElementById(id + 'Value').textContent = label;
+                    } else {
+                        state[key] = v / 100;
+                        document.getElementById(id + 'Value').textContent = v + '%';
+                    }
+                });
+            };
+
+            bind('densityLeft', 'densityLeft');
+            bind('patternLeft', 'patternLeft');
+            bind('grainSizeLeft', 'grainSizeLeft');
+            bind('pitchLeft', 'pitchLeft');
+            bind('densityRight', 'densityRight');
+            bind('patternRight', 'patternRight');
+            bind('grainSizeRight', 'grainSizeRight');
+            bind('pitchRight', 'pitchRight');
+            bind('resolution', 'resolution');
+            bind('tempo', 'tempo');
+            bind('reverb', 'reverb');
+            bind('volume', 'volume');
+            bind('swing', 'swing');
+            bind('dynamicVar', 'dynamicVar');
+
+            document.querySelectorAll('input[name="delayRate"]').forEach(radio => {
+                radio.addEventListener('change', e => {
+                    state.delayRate = parseFloat(e.target.value);
+                    updateDelayTime();
+                });
+            });
+
+            document.getElementById('fileInput').addEventListener('change', handleFileLoad);
+        }
+
+        function updateDelayTime() {
+            if (!delayNode || !audioContext) return;
+            if (state.delayRate === 0) {
+                delayWetGain.gain.setTargetAtTime(0, audioContext.currentTime, 0.05);
+                return;
+            }
+            const beatSeconds = 60 / state.tempo;
+            const rateMap = { 0.5: 2.0, 1.0: 1.0, 2.0: 0.5 }; // radio val -> beat multiplier
+            const delayTime = beatSeconds * (rateMap[state.delayRate] || 1.0);
+
+            delayNode.delayTime.setTargetAtTime(delayTime, audioContext.currentTime, 0.1);
+            delayWetGain.gain.setTargetAtTime(0.4, audioContext.currentTime, 0.1);
+        }
+
+        function updateAllDisplays() {
+            document.getElementById('densityLeftValue').textContent = Math.round(state.densityLeft * 100) + '%';
+            document.getElementById('patternLeftValue').textContent = PATTERNS[state.patternLeft].name;
+            document.getElementById('grainSizeLeftValue').textContent = '1/8';
+            document.getElementById('pitchLeftValue').textContent = Math.round(state.pitchLeft * 100) + '%';
+            document.getElementById('densityRightValue').textContent = Math.round(state.densityRight * 100) + '%';
+            document.getElementById('patternRightValue').textContent = PATTERNS[state.patternRight].name;
+            document.getElementById('grainSizeRightValue').textContent = '1/8';
+            document.getElementById('pitchRightValue').textContent = Math.round(state.pitchRight * 100) + '%';
+            document.getElementById('resolutionValue').textContent = RESOLUTIONS[state.resolution].name;
+            document.getElementById('tempoValue').textContent = state.tempo + ' BPM';
+            document.getElementById('reverbValue').textContent = Math.round(state.reverb * 100) + '%';
+            document.getElementById('volumeValue').textContent = Math.round(state.volume * 100) + '%';
+            document.getElementById('swingValue').textContent = Math.round(state.swing * 100) + '%';
+            document.getElementById('dynamicVarValue').textContent = Math.round(state.dynamicVar * 100) + '%';
+        }
+
+        function toggleSync() {
+            state.syncChannels = !state.syncChannels;
+            document.getElementById('syncToggle').classList.toggle('checked', state.syncChannels);
+            updateStatus(state.syncChannels ?
+                '<span class="sync-indicator"></span>Channels synchronized' :
+                'Channels unsynchronized');
+        }
+
+        function randomizeAll() {
+            state.densityLeft = 0.3 + Math.random() * 0.5;
+            state.patternLeft = Math.floor(Math.random() * PATTERNS.length);
+            state.grainSizeLeft = 0.2 + Math.random() * 0.6;
+            state.pitchLeft = Math.random() * 0.5;
+
+            state.densityRight = 0.3 + Math.random() * 0.5;
+            state.patternRight = Math.floor(Math.random() * PATTERNS.length);
+            state.grainSizeRight = 0.2 + Math.random() * 0.6;
+            state.pitchRight = Math.random() * 0.5;
+
+            state.swing = Math.random() * 0.4;
+            state.reverb = Math.random() * 0.6;
+            // state.dynamicVar is intentionally left at 0 or current user setting to keep it controlled
+
+            document.getElementById('densityLeft').value = state.densityLeft * 100;
+            document.getElementById('patternLeft').value = state.patternLeft;
+            document.getElementById('grainSizeLeft').value = state.grainSizeLeft * 100;
+            document.getElementById('pitchLeft').value = state.pitchLeft * 100;
+            document.getElementById('densityRight').value = state.densityRight * 100;
+            document.getElementById('patternRight').value = state.patternRight;
+            document.getElementById('grainSizeRight').value = state.grainSizeRight * 100;
+            document.getElementById('pitchRight').value = state.pitchRight * 100;
+            document.getElementById('swing').value = state.swing * 100;
+            document.getElementById('reverb').value = state.reverb * 100;
+
+            updateAllDisplays();
+            updateStatus('Randomized!');
+        }
+
+        async function handleFileLoad(e) {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('mainInterface').classList.remove('hidden');
+            updateStatus(`Loading ${files.length} files...`);
+
+            const half = Math.ceil(files.length / 2);
+            const leftFiles = files.slice(0, half);
+            const rightFiles = files.slice(half);
+
+            for (const file of leftFiles) {
+                try { leftSounds.push(await loadSound(file)); } catch (err) { console.error(err); }
+            }
+            for (const file of rightFiles) {
+                try { rightSounds.push(await loadSound(file)); } catch (err) { console.error(err); }
+            }
+
+            document.getElementById('countLeft').textContent = leftSounds.length + ' files';
+            document.getElementById('countRight').textContent = rightSounds.length + ' files';
+            updateStatus(`Loaded ${leftSounds.length} left + ${rightSounds.length} right sounds`);
+        }
+
+        async function loadSound(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                setupReverb();
+            }
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            return { name: file.name, buffer: audioBuffer, duration: audioBuffer.duration };
+        }
+
+        function setupReverb() {
+            reverbNode = audioContext.createConvolver();
+            reverbGain = audioContext.createGain();
+            dryGain = audioContext.createGain();
+            limiter = audioContext.createDynamicsCompressor();
+
+            // Delay Line
+            delayNode = audioContext.createDelay(4.0);
+            delayFeedback = audioContext.createGain();
+            delayWetGain = audioContext.createGain();
+
+            delayFeedback.gain.value = 0.35; // Rhythmic feedback level
+            delayWetGain.gain.value = 0; // Start off
+
+            delayNode.connect(delayFeedback);
+            delayFeedback.connect(delayNode);
+            delayNode.connect(delayWetGain);
+
+            // Limiter Settings
+            limiter.threshold.value = -1.0;
+            limiter.knee.value = 0;
+            limiter.ratio.value = 20.0;
+            limiter.attack.value = 0.005;
+            limiter.release.value = 0.1;
+
+            const duration = 3;
+            const sampleRate = audioContext.sampleRate;
+            const impulse = audioContext.createBuffer(2, duration * sampleRate, sampleRate);
+
+            for (let ch = 0; ch < 2; ch++) {
+                const data = impulse.getChannelData(ch);
+                for (let i = 0; i < data.length; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 1.5);
+                }
+            }
+
+            reverbNode.buffer = impulse;
+            reverbNode.connect(reverbGain);
+
+            // Route everything through limiter
+            reverbGain.connect(limiter);
+            dryGain.connect(limiter);
+            delayWetGain.connect(limiter);
+            limiter.connect(audioContext.destination);
+        }
+
+        function playGrain(sound, grainSize, pitchVariation, pan, time) {
+            if (!audioContext || !sound.buffer) return;
+
+            const grainDuration = getGrainDuration(grainSize);
+            const maxStart = Math.max(0, sound.buffer.duration - grainDuration);
+            const startTime = Math.random() * maxStart;
+
+            const source = audioContext.createBufferSource();
+            source.buffer = sound.buffer;
+
+            if (pitchVariation > 0) {
+                const semitones = (Math.random() - 0.5) * 24 * pitchVariation;
+                source.playbackRate.value = Math.pow(2, semitones / 12);
+            }
+
+            const gainNode = audioContext.createGain();
+            const panNode = audioContext.createStereoPanner();
+
+            const attackTime = Math.min(0.01, grainDuration * 0.1);
+            const releaseTime = Math.min(0.05, grainDuration * 0.3);
+
+            gainNode.gain.setValueAtTime(0, time);
+
+            // Calculate dynamic grain volume
+            const variance = state.dynamicVar;
+            const randomDrop = Math.random() * variance;
+            // Boost volume by 4x to drive the limiter
+            const grainVolume = (state.volume * (1 - randomDrop)) * 4.0;
+
+            gainNode.gain.linearRampToValueAtTime(grainVolume, time + attackTime);
+            gainNode.gain.setValueAtTime(grainVolume, time + grainDuration - releaseTime);
+            gainNode.gain.linearRampToValueAtTime(0, time + grainDuration);
+
+            panNode.pan.value = pan;
+
+            source.connect(gainNode);
+            gainNode.connect(panNode);
+
+            reverbGain.gain.value = state.reverb * 0.8;
+            dryGain.gain.value = 1 - state.reverb * 0.3;
+
+            panNode.connect(dryGain);
+            panNode.connect(reverbNode);
+            panNode.connect(delayNode);
+
+            source.start(time, startTime, grainDuration * 1.5);
+        }
+
+        function scheduler() {
+            const scheduleAhead = 0.1;
+            const stepDuration = getStepDuration();
+
+            while (nextNoteTime < audioContext.currentTime + scheduleAhead) {
+                scheduleNote(currentStep, nextNoteTime);
+                const swingOffset = (currentStep % 2 === 1) ? stepDuration * state.swing * 0.5 : 0;
+                nextNoteTime += stepDuration + swingOffset;
+                currentStep++;
+            }
+        }
+
+        function scheduleNote(step, time) {
+            const res = RESOLUTIONS[state.resolution];
+            const patternStep = Math.floor(step / (res.divisor / 4)) % 16;
+
+            setTimeout(() => updateBeatIndicator(patternStep), (time - audioContext.currentTime) * 1000);
+
+            // Both channels use the same timing grid and step calculation when they're syncd
+            const gridStep = patternStep;
+
+            if (leftSounds.length > 0) {
+                const pattern = PATTERNS[state.patternLeft].beats;
+                const patternWeight = pattern[gridStep] ? 1 : 0.3;
+                const probability = state.densityLeft * patternWeight + (state.densityLeft * state.densityLeft) * (1 - patternWeight);
+                if (Math.random() < probability) {
+                    const sound = leftSounds[Math.floor(Math.random() * leftSounds.length)];
+                    playGrain(sound, state.grainSizeLeft, state.pitchLeft, -0.8, time);
+                }
+            }
+
+            if (rightSounds.length > 0) {
+                const pattern = PATTERNS[state.patternRight].beats;
+                // Use the same grid step for both channels when synced
+                const rightStep = state.syncChannels ? gridStep : (gridStep + 8) % 16;
+                const patternWeight = pattern[rightStep] ? 1 : 0.3;
+                const probability = state.densityRight * patternWeight + (state.densityRight * state.densityRight) * (1 - patternWeight);
+                if (Math.random() < probability) {
+                    const sound = rightSounds[Math.floor(Math.random() * rightSounds.length)];
+                    playGrain(sound, state.grainSizeRight, state.pitchRight, 0.8, time);
+                }
+            }
+        }
+
+        function startPlayback() {
+            if (leftSounds.length === 0 && rightSounds.length === 0) {
+                updateStatus('Load audio files to begin');
+                return;
+            }
+
+            if (audioContext.state === 'suspended') audioContext.resume();
+
+            currentStep = 0;
+            nextNoteTime = audioContext.currentTime;
+            schedulerTimer = setInterval(scheduler, 25);
+        }
+
+        function stopPlayback() {
+            if (schedulerTimer) {
+                clearInterval(schedulerTimer);
+                schedulerTimer = null;
+            }
+        }
+
+        function togglePlayback() {
+            if (isPlaying) {
+                stopPlayback();
+                document.getElementById('transportBtn').textContent = 'START';
+                updateStatus('Stopped');
+            } else {
+                startPlayback();
+                document.getElementById('transportBtn').textContent = 'STOP';
+                updateStatus('Playing');
+            }
+            isPlaying = !isPlaying;
+        }
+
+        function updateStatus(text) {
+            document.getElementById('statusText').innerHTML = text;
+        }
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+
+</html>

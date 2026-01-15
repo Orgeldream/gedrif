@@ -608,13 +608,24 @@
             { name: '1/64', divisor: 16 }
         ];
 
+        // Grain sizes in beats (musical durations)
         const GRAIN_SIZES = [
-            { name: '1/64', beats: 1 / 16 },
-            { name: '1/32', beats: 1 / 8 },
-            { name: '1/16', beats: 1 / 4 },
-            { name: '1/8', beats: 1 / 2 },
-            { name: '1/4', beats: 1 },
-            { name: '1/2', beats: 2 }
+            { name: '1/64', beats: 1/16 },  // 0-16
+            { name: '1/32', beats: 1/8 },   // 17-33
+            { name: '1/16', beats: 1/4 },   // 34-50
+            { name: '1/8', beats: 1/2 },    // 51-66
+            { name: '1/4', beats: 1 },      // 67-83
+            { name: '1/2', beats: 2 }       // 84-100
+        ];
+
+        // Map slider values to grain size ranges
+        const GRAIN_SIZE_RANGES = [
+            { min: 0, max: 16, size: GRAIN_SIZES[0] },
+            { min: 17, max: 33, size: GRAIN_SIZES[1] },
+            { min: 34, max: 50, size: GRAIN_SIZES[2] },
+            { min: 51, max: 66, size: GRAIN_SIZES[3] },
+            { min: 67, max: 83, size: GRAIN_SIZES[4] },
+            { min: 84, max: 100, size: GRAIN_SIZES[5] }
         ];
 
         const state = {
@@ -636,11 +647,40 @@
             return (60 / state.tempo) / res.divisor;
         }
 
-        function getGrainDuration(grainSize) {
+        function getGrainDuration(grainSizeValue) {
+            // grainSizeValue is 0-1, map to 0-100 for range lookup
+            const sliderValue = grainSizeValue * 100;
+            
+            // Find which range the slider value falls into
+            let selectedRange = GRAIN_SIZE_RANGES[2]; // Default to middle (1/8)
+            for (const range of GRAIN_SIZE_RANGES) {
+                if (sliderValue >= range.min && sliderValue <= range.max) {
+                    selectedRange = range;
+                    break;
+                }
+            }
+            
+            // Calculate duration based on the selected grain size in beats
             const beatDur = 60 / state.tempo;
-            const minGrain = beatDur / 8;
-            const maxGrain = beatDur;
-            return minGrain + grainSize * (maxGrain - minGrain);
+            return beatDur * selectedRange.size.beats;
+        }
+
+        function getGrainSizeLabel(grainSizeValue) {
+            // grainSizeValue is 0-1, map to 0-100 for range lookup
+            const sliderValue = grainSizeValue * 100;
+            
+            // Find which range the slider value falls into
+            for (const range of GRAIN_SIZE_RANGES) {
+                if (sliderValue >= range.min && sliderValue <= range.max) {
+                    return range.size.name;
+                }
+            }
+            return GRAIN_SIZES[2].name; // Default to 1/8
+        }
+
+        function getGrainSizeFromSlider(sliderValue) {
+            // sliderValue is 0-100, convert to 0-1
+            return sliderValue / 100;
         }
 
         function init() {
@@ -683,11 +723,10 @@
                         state[key] = parseInt(v);
                         document.getElementById(id + 'Value').textContent = PATTERNS[v].name;
                     } else if (key.startsWith('grainSize')) {
-                        state[key] = v / 100;
-                        const dur = getGrainDuration(state[key]);
-                        const beatDur = 60 / state.tempo;
-                        const ratio = dur / beatDur;
-                        let label = ratio <= 0.125 ? '1/64' : ratio <= 0.25 ? '1/32' : ratio <= 0.5 ? '1/16' : ratio <= 1 ? '1/8' : '1/4';
+                        // Convert slider value (0-100) to normalized value (0-1)
+                        state[key] = getGrainSizeFromSlider(v);
+                        // Get the label based on which range the slider is in
+                        const label = getGrainSizeLabel(state[key]);
                         document.getElementById(id + 'Value').textContent = label;
                     } else {
                         state[key] = v / 100;
@@ -767,11 +806,11 @@
         function updateAllDisplays() {
             document.getElementById('densityLeftValue').textContent = Math.round(state.densityLeft * 100) + '%';
             document.getElementById('patternLeftValue').textContent = PATTERNS[state.patternLeft].name;
-            document.getElementById('grainSizeLeftValue').textContent = '1/8';
+            document.getElementById('grainSizeLeftValue').textContent = getGrainSizeLabel(state.grainSizeLeft);
             document.getElementById('pitchLeftValue').textContent = Math.round(state.pitchLeft * 100) + '%';
             document.getElementById('densityRightValue').textContent = Math.round(state.densityRight * 100) + '%';
             document.getElementById('patternRightValue').textContent = PATTERNS[state.patternRight].name;
-            document.getElementById('grainSizeRightValue').textContent = '1/8';
+            document.getElementById('grainSizeRightValue').textContent = getGrainSizeLabel(state.grainSizeRight);
             document.getElementById('pitchRightValue').textContent = Math.round(state.pitchRight * 100) + '%';
             document.getElementById('resolutionValue').textContent = RESOLUTIONS[state.resolution].name;
             document.getElementById('tempoValue').textContent = state.tempo + ' BPM';
@@ -779,6 +818,10 @@
             document.getElementById('volumeValue').textContent = Math.round(state.volume * 100) + '%';
             document.getElementById('swingValue').textContent = Math.round(state.swing * 100) + '%';
             document.getElementById('dynamicVarValue').textContent = Math.round(state.dynamicVar * 100) + '%';
+            
+            // Update slider positions to match current state
+            document.getElementById('grainSizeLeft').value = state.grainSizeLeft * 100;
+            document.getElementById('grainSizeRight').value = state.grainSizeRight * 100;
         }
 
         function toggleSync() {
@@ -792,12 +835,22 @@
         function randomizeAll() {
             state.densityLeft = 0.3 + Math.random() * 0.5;
             state.patternLeft = Math.floor(Math.random() * PATTERNS.length);
-            state.grainSizeLeft = 0.2 + Math.random() * 0.6;
+            // Random grain size within the segmented ranges
+            const randomGrainIndex = Math.floor(Math.random() * GRAIN_SIZE_RANGES.length);
+            const randomRange = GRAIN_SIZE_RANGES[randomGrainIndex];
+            const randomSliderValue = randomRange.min + Math.random() * (randomRange.max - randomRange.min);
+            state.grainSizeLeft = randomSliderValue / 100;
+            
             state.pitchLeft = Math.random() * 0.5;
 
             state.densityRight = 0.3 + Math.random() * 0.5;
             state.patternRight = Math.floor(Math.random() * PATTERNS.length);
-            state.grainSizeRight = 0.2 + Math.random() * 0.6;
+            // Random grain size for right channel
+            const randomGrainIndexRight = Math.floor(Math.random() * GRAIN_SIZE_RANGES.length);
+            const randomRangeRight = GRAIN_SIZE_RANGES[randomGrainIndexRight];
+            const randomSliderValueRight = randomRangeRight.min + Math.random() * (randomRangeRight.max - randomRangeRight.min);
+            state.grainSizeRight = randomSliderValueRight / 100;
+            
             state.pitchRight = Math.random() * 0.5;
 
             state.swing = Math.random() * 0.4;
